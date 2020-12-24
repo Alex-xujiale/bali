@@ -1,38 +1,16 @@
 import logging
 from functools import wraps
-from typing import Any
 
 from sqla_wrapper import SQLAlchemy
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from .models import get_base_model
 
 # from core.config import settings
 
 error_logger = logging.getLogger('error')
 
-# engine = create_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
-#
-# session_factory = sessionmaker(bind=engine)
-# SessionLocal = scoped_session(session_factory)
 
-# db = SQLAlchemy(settings.SQLALCHEMY_DATABASE_URI)
-
-
-@as_declarative()
-class Base:
-    id: Any
-    __name__: str
-
-    # Generate __tablename__ automatically
-
-    @declared_attr
-    def __tablename__(cls) -> str:
-        return cls.__name__.lower()
-
-    def to_dict(self):
-        return {c.name: getattr(self, c.name, None) for c in self.__table__.columns}
-
-
+# noinspection PyPep8Naming
 class DB:
     def __init__(self):
         self._session = None
@@ -41,12 +19,16 @@ class DB:
         self._session = SQLAlchemy(database_uri)
 
     def __getattribute__(self, attr, *args, **kwargs):
-
         try:
             return super().__getattribute__(attr)
         except AttributeError:
             if not self._session:
                 raise Exception('Database session not initialized')
+
+            # BaseModel
+            if attr == 'BaseModel':
+                return get_base_model(self)
+
             return getattr(self._session, attr)
 
 
